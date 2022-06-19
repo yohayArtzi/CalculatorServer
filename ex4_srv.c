@@ -68,15 +68,17 @@ void client_handler() {
     }
     char buf[MAX];
     int nums[2], operation, client_pid, i = 0;
-    while (fgets(buf, MAX, to_srv)) {
+    for (; fgets(buf, MAX, to_srv); i++) {
         if (0 == i) {
             client_pid = atoi(buf);
+            //printf("client pid is %d", client_pid);
+        } else if (1 == i) {
+            nums[0] = atoi(buf);
         } else if (2 == i) {
             operation = atoi(buf);
         } else {
-            nums[i] = atoi(buf);
+            nums[1] = atoi(buf);
         }
-        i++;
     }
     if (fclose(to_srv) != 0) {
         printf("ERROR_FROM_EX4\n");
@@ -112,7 +114,7 @@ void client_handler() {
     }
     int kill_val = kill(client_pid, SIGUSR2);
     if (-1 == kill_val) {
-        if (remove(to_client) != 0) {
+        if (remove(name) != 0) {
             printf("ERROR_FROM_EX4\n");
             exit(1);
         }
@@ -124,6 +126,7 @@ void client_handler() {
 
 // calculate client request
 int calculate(int operation, int num1, int num2) {
+    printf("exercise is: %d %d %d\n", num1, operation, num2);
     if (PLUS == operation)
         return num1 + num2;
     else if (MINUS == operation)
