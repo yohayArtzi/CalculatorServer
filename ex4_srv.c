@@ -18,16 +18,18 @@ void client_handler();
 
 void time_over();
 
-
+// need to add test if file exists before remove
 int main() {
     signal(SIGUSR1, client_handler);
     signal(SIGALRM, time_over);
 
     // delete "to_srv" file if exists
-    int status = remove("to_srv.txt");
-    if(0 != status){
-        printf("ERROR_FROM_EX4\n");
-        exit(1);
+    if (0 == access("to_srv.txt", F_OK)) {
+        int status = remove("to_srv.txt");
+        if (0 != status) {
+            printf("ERROR_FROM_EX4\n");
+            exit(1);
+        }
     }
 
     // run server - waiting for clients (without busy waiting)
@@ -39,6 +41,12 @@ int main() {
 
 }
 
+// stop server and exit
+void time_over() {
+    while (wait(NULL) != (-1));
+    printf("The server was closed because no service request was received for the last 60 seconds\n");
+    exit(0);
+}
 
 // handle client request for operation
 void client_handler() {
@@ -90,10 +98,9 @@ void client_handler() {
         exit(1);
     }
     // if calculation requires division by zero
-    if (DIV == operation && 0 == nums[1]){
+    if (DIV == operation && 0 == nums[1]) {
         fputs("CANNOT_DIVIDE_BY_ZERO\n", to_client);
-    }
-    else{
+    } else {
         int result = calculate(operation, nums[0], nums[1]);
         char result_str[MAX];
         sprintf(result_str, "%d", result);
@@ -103,7 +110,7 @@ void client_handler() {
         printf("ERROR_FROM_EX4\n");
         exit(1);
     }
-    int kill_val = kill( client_pid, SIGUSR2);
+    int kill_val = kill(client_pid, SIGUSR2);
     if (-1 == kill_val) {
         if (remove(to_client) != 0) {
             printf("ERROR_FROM_EX4\n");
@@ -112,7 +119,7 @@ void client_handler() {
         printf("ERROR_FROM_EX4\n");
         exit(1);
     }
-    exit(0);
+    exit(0); // delete child process
 }
 
 // calculate client request
