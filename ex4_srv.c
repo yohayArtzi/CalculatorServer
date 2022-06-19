@@ -18,7 +18,7 @@ void client_handler();
 
 void time_over();
 
-// need to add test if file exists before remove
+
 int main() {
     signal(SIGUSR1, client_handler);
     signal(SIGALRM, time_over);
