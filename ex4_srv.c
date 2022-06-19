@@ -3,11 +3,45 @@
 #include <unistd.h>
 #include<sys/wait.h>
 #include <stdlib.h>
+#include <string.h>
 
+// maximum amount of digits for a number represented by int
+#define MAX 20
+#define PLUS 1
+#define MINUS 2
+#define MULT 3
+#define DIV 4
+
+int calculate(int operation, int num1, int num2);
+
+void client_handler();
+
+void time_over();
+
+
+int main() {
+    signal(SIGUSR1, client_handler);
+    signal(SIGALRM, time_over);
+
+    // delete "to_srv" file if exists
+    int status = remove("to_srv.txt");
+    if(0 != status){
+        printf("ERROR_FROM_EX4\n");
+        exit(1);
+    }
+
+    // run server - waiting for clients (without busy waiting)
+    while (1) {
+        alarm(60);
+        pause();
+        //alarm(0);
+    }
+
+}
 
 
 // handle client request for operation
-void client_handler(){
+void client_handler() {
     pid_t pid = fork();
     // fork failed
     if (0 > pid) {
@@ -17,26 +51,77 @@ void client_handler(){
     // parent process return to handle clients
     if (0 < pid)
         return;
-    // child process execute calculation:
-    FILE* to_srv = fopen("to_srv.txt", "r");
+    // in child process. execute calculation:
+    FILE *to_srv = fopen("to_srv.txt", "r");
     // file not open
-    if (NULL == to_srv){
+    if (NULL == to_srv) {
         printf("ERROR_FROM_EX4\n");
         exit(1);
     }
-
-
-    // calculate
+    char buf[MAX];
+    int nums[2], operation, client_pid, i = 0;
+    while (fgets(buf, MAX, to_srv)) {
+        if (0 == i) {
+            client_pid = atoi(buf);
+        } else if (2 == i) {
+            operation = atoi(buf);
+        } else {
+            nums[i] = atoi(buf);
+        }
+        i++;
+    }
+    if (fclose(to_srv) != 0) {
+        printf("ERROR_FROM_EX4\n");
+        exit(1);
+    }
+    if (remove("to_srv.txt") != 0) {
+        printf("ERROR_FROM_EX4\n");
+        exit(1);
+    }
+    // create client file and write the result there
+    char name[50] = "to_client_";
+    char pid_str[30];
+    sprintf(pid_str, "%d", client_pid);
+    strcat(strcat(name, pid_str), ".txt");
+    FILE *to_client = fopen(name, "w");
+    // file not open
+    if (NULL == to_client) {
+        printf("ERROR_FROM_EX4\n");
+        exit(1);
+    }
+    // if calculation requires division by zero
+    if (DIV == operation && 0 == nums[1]){
+        fputs("CANNOT_DIVIDE_BY_ZERO\n", to_client);
+    }
+    else{
+        int result = calculate(operation, nums[0], nums[1]);
+        char result_str[MAX];
+        sprintf(result_str, "%d", result);
+        fputs(result_str, to_client);
+    }
+    if (fclose(to_client) != 0) {
+        printf("ERROR_FROM_EX4\n");
+        exit(1);
+    }
+    int kill_val = kill( client_pid, SIGUSR2);
+    if (-1 == kill_val) {
+        if (remove(to_client) != 0) {
+            printf("ERROR_FROM_EX4\n");
+            exit(1);
+        }
+        printf("ERROR_FROM_EX4\n");
+        exit(1);
+    }
     exit(0);
 }
 
-int main() {
-    signal(SIGUSR1, client_handler);
-    // server loop - waiting for clients (without busy waiting)
-    while(1){
-        pause();
-    }
-    while(wait(NULL) != -1); // wait for all child processes to finish
-    //printf("Hello, World!\n");
-    return 0;
+// calculate client request
+int calculate(int operation, int num1, int num2) {
+    if (PLUS == operation)
+        return num1 + num2;
+    else if (MINUS == operation)
+        return num1 - num2;
+    else if (MULT == operation)
+        return num1 * num2;
+    return num1 / num2;
 }
