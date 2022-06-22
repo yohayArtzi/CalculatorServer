@@ -1,3 +1,5 @@
+
+
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
@@ -101,12 +103,16 @@ void client_handler() {
     }
     // if calculation requires division by zero
     if (DIV == operation && 0 == nums[1]) {
-        fputs("CANNOT_DIVIDE_BY_ZERO\n", to_client);
+        fputs("CANNOT_DIVIDE_BY_ZERO", to_client);
     } else {
         int result = calculate(operation, nums[0], nums[1]);
         char result_str[MAX];
-        sprintf(result_str, "%d", result);
-        fputs(result_str, to_client);
+        if (0 == result)
+            fputs("0", to_client);
+        else {
+            sprintf(result_str, "%d", result);
+            fputs(result_str, to_client);
+        }
     }
     if (fclose(to_client) != 0) {
         printf("ERROR_FROM_EX4\n");
@@ -126,12 +132,13 @@ void client_handler() {
 
 // calculate client request
 int calculate(int operation, int num1, int num2) {
-    printf("exercise is: %d %d %d\n", num1, operation, num2);
+    //printf("exercise is: %d %d %d\n", num1, operation, num2);
     if (PLUS == operation)
         return num1 + num2;
     else if (MINUS == operation)
         return num1 - num2;
     else if (MULT == operation)
         return num1 * num2;
-    return num1 / num2;
+    float result = num1/num2;
+    return result;
 }
